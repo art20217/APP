@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>容積式潤滑系統計算器 V3.4</title>
+    <title>容積式潤滑系統計算器 V3.6</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -37,7 +37,7 @@
         <div class="mb-4 md:mb-0">
             <h1 class="text-3xl font-extrabold text-gray-800 flex items-center">
                 <i class="fa-solid fa-oil-can text-indigo-600 mr-3"></i>
-                容積式潤滑系統計算器 <span class="text-sm bg-gray-800 text-white px-2 py-1 rounded ml-2">V3.4</span>
+                容積式潤滑系統計算器 <span class="text-sm bg-gray-800 text-white px-2 py-1 rounded ml-2">V3.6</span>
             </h1>
         </div>
         <div class="space-x-2 flex">
@@ -169,76 +169,84 @@
 
     <transition name="modal">
         <div v-if="showEditMergedModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="showEditMergedModal = false">
-            <div class="bg-white rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden">
-                <div class="bg-indigo-900 text-white p-4 flex justify-between items-center">
+            <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"> <div class="bg-indigo-900 text-white p-4 flex justify-between items-center">
                     <h3 class="font-bold text-lg"><i class="fas fa-edit mr-2"></i> 編輯合併組成員</h3>
                     <button @click="showEditMergedModal = false" class="text-indigo-300 hover:text-white"><i class="fas fa-times"></i></button>
                 </div>
                 
-                <div class="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar bg-gray-100 space-y-4">
+                <div class="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar bg-gray-50 flex flex-col space-y-4">
                     
-                    <div class="space-y-3">
-                        <div v-for="pt in editingMergedChildren" :key="pt.id" class="p-4 border rounded-lg transition-all bg-white border-gray-200 shadow-sm relative group">
+                    <div class="space-y-3 flex-1">
+                        <div v-for="(pt, index) in editingMergedChildren" :key="pt.id" 
+                            class="p-4 border rounded-lg transition-all bg-white border-gray-200 hover:border-indigo-300 shadow-sm">
                             
-                            <button @click="removeChildFromGroup(pt.id)" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition p-1" title="從群組移除 (變為獨立點)">
-                                <i class="fas fa-trash-can"></i>
-                            </button>
-
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center space-x-3 overflow-hidden">
                                     <div class="bg-green-100 text-green-800 min-w-[24px] h-[24px] px-1 rounded flex items-center justify-center text-xs font-bold">
-                                        <i class="fas fa-child"></i>
+                                        #{{ String(index + 1).padStart(2, '0') }}
                                     </div>
-                                    <div class="font-bold text-gray-800 text-sm">
-                                        <span class="text-gray-400 mr-1 text-xs">名稱:</span>
-                                        <input v-model="pt.name" class="border-b border-indigo-400 focus:border-indigo-600 outline-none bg-transparent text-sm w-40">
-                                    </div>
+                                    <div v-if="!pt.isEditing" class="font-bold text-gray-800 text-sm truncate" :title="pt.name">{{ pt.name }}</div>
+                                    <input v-else v-model="pt.name" class="border border-indigo-400 rounded px-2 py-0.5 text-sm w-32 focus:outline-none" @click.stop>
+                                </div>
+                                <div class="flex items-center space-x-1 flex-shrink-0">
+                                    <i @click="toggleEdit(pt)" :class="['fas fa-pen-to-square btn-icon text-sm', pt.isEditing ? 'text-green-600' : 'text-gray-400 hover:text-indigo-600']"></i>
+                                    <i @click="removeChildFromGroup(pt.id)" class="fas fa-trash-can btn-icon text-sm text-gray-400 hover:text-red-500" title="從群組移除"></i>
                                 </div>
                             </div>
 
                             <div class="pl-9 flex justify-between items-end">
                                 <div class="text-xs text-gray-500">
-                                    <div class="flex items-center space-x-1">
-                                        <i :class="getTypeName(pt.typeId).icon" class="text-gray-400"></i>
-                                        <span>{{ getTypeName(pt.typeId).name }}</span>
-                                        <span v-if="pt.direction">({{ pt.direction === 'horizontal' ? 'H' : 'V' }})</span>
-                                    </div>
-                                    <div class="text-[10px] text-gray-400 pt-0.5">
-                                        {{ getPointDimensionsStr(pt) }}
+                                    <div class="space-y-1">
+                                        <div class="flex items-center space-x-1">
+                                            <i :class="getTypeName(pt.typeId).icon" class="text-gray-400"></i>
+                                            <span>{{ getTypeName(pt.typeId).name }}</span>
+                                            <span v-if="pt.direction">({{ pt.direction === 'horizontal' ? 'H' : 'V' }})</span>
+                                        </div>
+                                        <div class="text-[10px] text-gray-400 pt-0.5">
+                                            {{ getPointDimensionsStr(pt) }}
+                                        </div>
                                     </div>
                                     <div class="flex items-center mt-1">
                                         <span class="mr-1 font-semibold">K =</span>
-                                        <input v-model.number="pt.kFactor" type="number" step="0.1" class="border border-indigo-400 rounded px-1 py-0 text-xs w-16 bg-white focus:ring-1 focus:ring-indigo-500">
+                                        <span v-if="!pt.isEditing" class="font-mono">{{ pt.kFactor }}</span>
+                                        <input v-else v-model.number="pt.kFactor" type="number" step="0.1" class="border border-indigo-400 rounded px-1 py-0 text-xs w-12 bg-white">
                                     </div>
                                 </div>
                                 <div class="text-right px-2 py-1 rounded border bg-blue-50 border-blue-100 text-blue-700">
                                     <div class="text-[10px] uppercase font-bold tracking-wide opacity-70">Q_req</div>
-                                    <div class="text-lg font-mono font-bold leading-none">
-                                        {{ calculatePointQ(pt).toFixed(1) }}
-                                    </div>
+                                    <div class="text-lg font-mono font-bold leading-none">{{ calculatePointQ(pt).toFixed(1) }}</div>
                                 </div>
                             </div>
                         </div>
+
+                        <div v-if="editingMergedChildren.length === 0" class="text-center text-gray-400 py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                            此群組目前沒有成員
+                        </div>
                     </div>
 
-                    <div class="mt-6 pt-4 border-t border-gray-300">
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-4">
                         <label class="text-xs font-bold text-gray-500 uppercase mb-2 block">加入未合併的潤滑點</label>
                         <div class="flex space-x-2">
-                            <select v-model="selectedPointToAddId" class="flex-1 text-sm border border-gray-300 rounded p-2 focus:border-indigo-500 focus:outline-none">
+                            <select v-model="selectedPointToAddId" class="flex-1 text-sm border border-gray-300 rounded p-2 focus:border-indigo-500 focus:outline-none bg-gray-50">
                                 <option :value="null">-- 選擇潤滑點 --</option>
                                 <option v-for="pt in availablePointsForEdit" :key="pt.id" :value="pt.id">
                                     {{ pt.name }} (Q: {{ calculatePointQ(pt) }})
                                 </option>
                             </select>
-                            <button @click="addChildToGroup" :disabled="!selectedPointToAddId" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-sm">
+                            <button @click="addChildToGroup" :disabled="!selectedPointToAddId" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-sm flex items-center whitespace-nowrap">
                                 <i class="fas fa-plus mr-1"></i> 加入
                             </button>
                         </div>
                     </div>
 
                 </div>
+                
+                <div v-if="editingMergedChildren.length < 2" class="px-6 pb-2 text-red-500 text-xs font-bold text-right">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> 合併組至少需包含 2 個潤滑點才能儲存
+                </div>
+
                 <div class="p-4 bg-white border-t border-gray-200 flex justify-end">
-                    <button @click="showEditMergedModal = false" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 font-bold">完成編輯</button>
+                    <button @click="showEditMergedModal = false" :disabled="editingMergedChildren.length < 2" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 font-bold disabled:opacity-50 disabled:cursor-not-allowed">完成編輯</button>
                 </div>
             </div>
         </div>
